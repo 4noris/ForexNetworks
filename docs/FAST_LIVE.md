@@ -1,0 +1,15 @@
+# Live refresh and latency
+
+Manager Overview (including the margin watchlist, C/Cov symbol table, and top account exposure) consumes the shared dashboard stream. Dealing & Risk consumes pushed risk snapshots directly for the worst positions, live symbol book, floating rankings, symbol exposure, account concentration and account/symbol exposure charts.
+
+Performance, Exposure's realized P&L, Anti-Fraud and per-client live views now have retained, scoped subscriptions. Equivalent filters share one connection and one subscription in a browser tab. Scoped read views are shared per authenticated user on the backend. A slow subscription builds in its own task and cannot block receiving/cancelling other socket queries. Heavy history scans still run through the existing bounded background workers.
+
+Live snapshots are checked approximately every 0.5 seconds after the preceding build finishes, with generation reuse when the source has not changed. Performance and Anti-Fraud results are checked every second; the historical scan cadence and existing cache TTLs still apply. This is a delivery interval, not a claim that MT5 publishes data every 0.5 seconds or that a cold historical scan completes in that time. No synthetic ticks, fake zero coverage, or speculative internalisation records are introduced. Account/position snapshots older than 10 seconds cannot use the new single-account cache path.
+
+The Analyser copies one account and its indexed positions instead of the entire Manager book. Its live updates use that exact snapshot when fresh. IP/VPS intelligence uses known cached evidence immediately while missing provider lookups run in the background; unknown provider data stays unavailable. Anti-Fraud can reuse a complete fresh account/position cache instead of requesting the same users, positions and account metrics again from the SDK. Its deal-history evidence remains source-backed and independently timed.
+
+Only the visible Dealing & Risk subtab starts its own UI refreshes. The configured backend anti-fraud monitor continues independently. Manager notifications remain a recovery signal and RPC/HTTP polling remains a fallback when a push source is unavailable. Scope changes cancel in-flight single-client live requests. Subscriptions use session authentication and preserve group and excluded-login filters.
+
+Markout dates now adjust the opposite boundary to keep a maximum of seven inclusive UTC dates. Quick actions select Today (UTC) or the last seven UTC days. The backend still rejects invalid direct requests. Broker tick availability, the existing 300-fill/20-symbol scan bound, and future horizon maturity can still prevent a completed quote-backed report.
+
+Verification uses unit tests for cache scoping, source freshness, shared subscriptions and RPC responsiveness, plus browser checks for date controls. These checks do not establish a production latency percentile or prove that a broker exposes every required feed. Measure source generation timestamps and browser receive times under the actual account/group load before making a speed claim.

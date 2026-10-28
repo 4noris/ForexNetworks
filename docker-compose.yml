@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  reporting-tool:
+    build: .
+    ports:
+      - "80:8000"
+    environment:
+      - BACKEND_URL=${BACKEND_URL}
+    volumes:
+      - ./users.db:/app/users.db
+    restart: unless-stopped
